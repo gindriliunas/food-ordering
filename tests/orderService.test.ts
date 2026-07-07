@@ -12,6 +12,7 @@ describe('OrderService', () => {
     kitchenId: 'kitchen-1',
     items: [{ name: 'Tomatoes', quantity: 5, unit: 'kg' }],
     deliveryDate: '2026-07-15T09:00:00.000Z',
+    deliveryAddress: '12 Kitchen Lane, London',
     status: 'PENDING',
     createdAt: '2026-07-06T10:00:00.000Z',
     updatedAt: '2026-07-06T10:00:00.000Z',
@@ -42,6 +43,7 @@ describe('OrderService', () => {
         {
           items: [{ name: 'Tomatoes', quantity: 5, unit: 'kg' }],
           deliveryDate: '2026-07-15T09:00:00.000Z',
+          deliveryAddress: '12 Kitchen Lane, London',
         },
         'kitchen-1'
       );

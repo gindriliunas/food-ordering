@@ -1,9 +1,10 @@
 export type OrderStatus = 'PENDING' | 'CONFIRMED' | 'FAILED';
+export type OrderUnit = 'g' | 'kg' | 'items';
 
 export interface OrderItem {
   name: string;
   quantity: number;
-  unit: string;
+  unit: OrderUnit | string;
 }
 
 export interface Order {
@@ -11,6 +12,7 @@ export interface Order {
   kitchenId: string;
   items: OrderItem[];
   deliveryDate: string;
+  deliveryAddress: string;
   status: OrderStatus;
   createdAt: string;
   updatedAt: string;
@@ -19,6 +21,7 @@ export interface Order {
 export interface CreateOrderRequest {
   items: OrderItem[];
   deliveryDate: string;
+  deliveryAddress: string;
   kitchenId?: string;
 }
 
@@ -28,5 +31,6 @@ export interface OrderPlacedEvent {
   kitchenId: string;
   items: OrderItem[];
   deliveryDate: string;
+  deliveryAddress: string;
   timestamp: string;
 }

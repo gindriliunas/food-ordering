@@ -30,6 +30,7 @@ const statusLabel: Record<Order['status'], string> = {
       <div>
         <strong>{{ order.items[0]?.name ?? 'Order' }}</strong>
         <p>{{ order.items[0]?.quantity }} {{ order.items[0]?.unit }} · {{ order.kitchenId }}</p>
+        <p v-if="order.deliveryAddress" class="address">{{ order.deliveryAddress }}</p>
         <small>{{ order.id }}</small>
       </div>
       <span class="status" :class="order.status.toLowerCase()">

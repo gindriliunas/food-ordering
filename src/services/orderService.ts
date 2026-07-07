@@ -27,6 +27,7 @@ export class OrderService {
       kitchenId: validated.kitchenId ?? kitchenId,
       items: validated.items,
       deliveryDate: validated.deliveryDate,
+      deliveryAddress: validated.deliveryAddress,
       status: 'PENDING',
       createdAt: now,
       updatedAt: now,
@@ -63,6 +64,7 @@ export class OrderService {
       kitchenId: order.kitchenId,
       items: order.items,
       deliveryDate: order.deliveryDate,
+      deliveryAddress: order.deliveryAddress,
       timestamp: order.createdAt,
     };
 

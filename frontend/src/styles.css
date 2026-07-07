@@ -40,7 +40,8 @@ button:disabled {
 }
 
 input,
-textarea {
+textarea,
+select {
   width: 100%;
   border: 1px solid #d9d0c2;
   border-radius: 14px;
@@ -225,6 +226,10 @@ h2 {
   display: block;
   margin: 0.25rem 0 0;
   color: #697360;
+}
+
+.order .address {
+  font-size: 0.92rem;
 }
 
 .status {

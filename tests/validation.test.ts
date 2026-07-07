@@ -4,6 +4,7 @@ describe('validateCreateRequest', () => {
   const validRequest = {
     items: [{ name: 'Tomatoes', quantity: 10, unit: 'kg' }],
     deliveryDate: '2026-07-15T09:00:00.000Z',
+    deliveryAddress: '12 Kitchen Lane, London',
   };
 
   it('accepts a valid request', () => {
@@ -23,6 +24,26 @@ describe('validateCreateRequest', () => {
       validateCreateRequest({
         items: [{ name: 'Tomatoes', quantity: 0, unit: 'kg' }],
         deliveryDate: validRequest.deliveryDate,
+        deliveryAddress: validRequest.deliveryAddress,
+      })
+    ).toThrow(ValidationError);
+  });
+
+  it('rejects invalid unit', () => {
+    expect(() =>
+      validateCreateRequest({
+        items: [{ name: 'Tomatoes', quantity: 5, unit: 'litres' }],
+        deliveryDate: validRequest.deliveryDate,
+        deliveryAddress: validRequest.deliveryAddress,
+      })
+    ).toThrow(ValidationError);
+  });
+
+  it('rejects missing delivery address', () => {
+    expect(() =>
+      validateCreateRequest({
+        ...validRequest,
+        deliveryAddress: '',
       })
     ).toThrow(ValidationError);
   });
