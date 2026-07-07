@@ -331,18 +331,6 @@ terraform/        # AWS infrastructure (VPC, SGs, WAF optional)
 .github/workflows/ci.yml
 ```
 
-## Interview talking points
-
-1. **Domain fit** — mirrors Collectiv Food's supply chain: kitchens place orders, events flow async through messaging
-2. **Full-stack AWS demo** — Vue.js hosted on S3/CloudFront calls a serverless TypeScript API
-3. **SOLID** — `OrderService` depends on `OrderRepository` interface, not DynamoDB directly
-4. **TDD** — validation and service logic covered by unit tests before integration
-5. **Event-driven** — SNS decouples API from fulfilment; SQS gives retries + DLQ for failed messages
-6. **Security** — Cognito + JWT authorizer; VPC security group tiers; optional WAF; CORS restricted to CloudFront
-7. **DevSecOps** — tfsec and npm audit in CI; branch rulesets for read-only repo; defence in depth at $0 for the demo
-8. **CI/CD** — GitHub Actions builds and verifies both backend and frontend
-9. **Cost** — serverless + on-demand DynamoDB stays within AWS free tier; VPC/SGs are free; WAF optional
-
 ## Cleanup
 
 ```bash
