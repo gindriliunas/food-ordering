@@ -1,0 +1,28 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ApiGatewayV2HttpApi",
+      "Effect": "Allow",
+      "Action": "apigateway:*",
+      "Resource": [
+        "arn:aws:apigateway:eu-west-2::/apis",
+        "arn:aws:apigateway:eu-west-2::/apis/*"
+      ]
+    },
+    {
+      "Sid": "TerraformStateBucket",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:DeleteObject",
+        "s3:ListBucket"
+      ],
+      "Resource": [
+        "arn:aws:s3:::food-ordering-terraform-state-631026310596-us-east-1-an",
+        "arn:aws:s3:::food-ordering-terraform-state-631026310596-us-east-1-an/*"
+      ]
+    }
+  ]
+}
