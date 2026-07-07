@@ -109,7 +109,7 @@ watch(
       <input v-model="deliveryDate" class="field-control" required type="datetime-local" />
     </label>
 
-    <section class="pricing-summary" aria-label="Approximate order pricing">
+    <section class="pricing-summary" aria-label="Order pricing">
       <div class="pricing-row">
         <span>Unit price</span>
         <span>{{ unitLabel }}</span>
@@ -127,10 +127,9 @@ watch(
         <span>{{ formatGbp(totals.vat) }}</span>
       </div>
       <div class="pricing-row pricing-total">
-        <span>Estimated total</span>
+        <span>Total</span>
         <strong>{{ formatGbp(totals.total) }}</strong>
       </div>
-      <p class="pricing-note muted">Approximate pricing for planning. Final invoice may vary.</p>
     </section>
 
     <button type="submit">Place order</button>

@@ -355,14 +355,29 @@ h2 {
   font-weight: 600;
 }
 
+.delivery-date {
+  margin: 0.25rem 0 0;
+  font-weight: 700;
+}
+
 .order-price {
   margin: 0.25rem 0 0;
   color: #1f6f43;
   font-weight: 800;
 }
 
-.orders-total {
+.order-vat {
+  margin: 0.15rem 0 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.orders-summary {
   margin-top: 0.5rem;
+}
+
+.orders-total {
+  margin-top: 0.25rem;
 }
 
 .timeline-card {

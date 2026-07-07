@@ -9,13 +9,35 @@ const props = defineProps<{
   deletingId: string | null;
 }>();
 
-const grandTotal = computed(() =>
-  props.orders.reduce((sum, order) => {
-    const item = order.items[0];
-    if (!item) return sum;
-    return sum + calculateOrderTotals(item).total;
-  }, 0),
+const ordersWithTotals = computed(() =>
+  props.orders.map((order) => ({
+    order,
+    totals: order.items[0] ? calculateOrderTotals(order.items[0]) : null,
+  })),
 );
+
+const grandTotals = computed(() =>
+  ordersWithTotals.value.reduce(
+    (acc, { totals }) => {
+      if (!totals) return acc;
+      return {
+        total: acc.total + totals.total,
+        vat: acc.vat + totals.vat,
+      };
+    },
+    { total: 0, vat: 0 },
+  ),
+);
+
+function formatDeliveryDate(iso: string): string {
+  return new Intl.DateTimeFormat('en-GB', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(iso));
+}
 
 const emit = defineEmits<{
   delete: [id: string];
@@ -42,13 +64,17 @@ const statusLabel: Record<Order['status'], string> = {
     <p v-else-if="orders.length === 0" class="muted">No orders yet. Create the first one.</p>
 
     <template v-else>
-      <article v-for="order in orders" :key="order.id" class="order">
+      <article v-for="{ order, totals } in ordersWithTotals" :key="order.id" class="order">
         <div>
           <strong>{{ order.items[0]?.name ?? 'Order' }}</strong>
           <p>{{ order.items[0]?.quantity }} {{ order.items[0]?.unit }} · {{ order.kitchenId }}</p>
-          <p v-if="order.items[0]" class="order-price">
-            Est. {{ formatGbp(calculateOrderTotals(order.items[0]).total) }}
+          <p v-if="order.deliveryDate" class="delivery-date">
+            Delivery {{ formatDeliveryDate(order.deliveryDate) }}
           </p>
+          <template v-if="totals">
+            <p class="order-price">Total {{ formatGbp(totals.total) }}</p>
+            <p class="order-vat muted">VAT (20%) {{ formatGbp(totals.vat) }}</p>
+          </template>
           <p v-if="order.deliveryAddress" class="address">{{ order.deliveryAddress }}</p>
           <small>{{ order.id }}</small>
         </div>
@@ -73,9 +99,15 @@ const statusLabel: Record<Order['status'], string> = {
         </div>
       </article>
 
-      <div class="orders-total pricing-row pricing-total">
-        <span>Estimated total</span>
-        <strong>{{ formatGbp(grandTotal) }}</strong>
+      <div class="orders-summary">
+        <div class="pricing-row">
+          <span>VAT (20%)</span>
+          <span>{{ formatGbp(grandTotals.vat) }}</span>
+        </div>
+        <div class="orders-total pricing-row pricing-total">
+          <span>Total</span>
+          <strong>{{ formatGbp(grandTotals.total) }}</strong>
+        </div>
       </div>
     </template>
   </section>
