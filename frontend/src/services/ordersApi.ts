@@ -24,6 +24,10 @@ export class OrdersApi {
     return this.request<Order>(`/orders/${id}`);
   }
 
+  async deleteOrder(id: string): Promise<void> {
+    await this.request<void>(`/orders/${id}`, { method: 'DELETE' });
+  }
+
   private async request<T>(path: string, init: RequestInit = {}): Promise<T> {
     const response = await fetch(`${this.apiUrl}${path}`, {
       ...init,
@@ -34,7 +38,8 @@ export class OrdersApi {
       },
     });
 
-    const body = await response.json().catch(() => null);
+    const body =
+      response.status === 204 ? null : await response.json().catch(() => null);
 
     if (!response.ok) {
       const message =

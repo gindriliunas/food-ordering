@@ -4,7 +4,7 @@ resource "aws_apigatewayv2_api" "main" {
 
   cors_configuration {
     allow_headers = ["authorization", "content-type"]
-    allow_methods = ["GET", "POST", "OPTIONS"]
+    allow_methods = ["GET", "POST", "DELETE", "OPTIONS"]
     allow_origins = ["*"]
   }
 }
@@ -42,6 +42,13 @@ resource "aws_apigatewayv2_integration" "list_orders" {
   payload_format_version = "2.0"
 }
 
+resource "aws_apigatewayv2_integration" "delete_order" {
+  api_id                 = aws_apigatewayv2_api.main.id
+  integration_type       = "AWS_PROXY"
+  integration_uri        = aws_lambda_function.handlers["deleteOrder"].invoke_arn
+  payload_format_version = "2.0"
+}
+
 resource "aws_apigatewayv2_route" "create_order" {
   api_id             = aws_apigatewayv2_api.main.id
   route_key          = "POST /orders"
@@ -66,10 +73,26 @@ resource "aws_apigatewayv2_route" "list_orders" {
   authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
 }
 
+resource "aws_apigatewayv2_route" "delete_order" {
+  api_id             = aws_apigatewayv2_api.main.id
+  route_key          = "DELETE /orders/{id}"
+  target             = "integrations/${aws_apigatewayv2_integration.delete_order.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
+}
+
 resource "aws_apigatewayv2_stage" "default" {
   api_id      = aws_apigatewayv2_api.main.id
   name        = "$default"
   auto_deploy = true
+}
+
+resource "aws_lambda_permission" "api_delete_order" {
+  statement_id  = "AllowAPIGatewayInvokeDeleteOrder"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.handlers["deleteOrder"].function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
 }
 
 resource "aws_lambda_permission" "api_create_order" {

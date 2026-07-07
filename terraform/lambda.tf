@@ -1,5 +1,5 @@
 locals {
-  lambda_handlers = toset(["createOrder", "getOrder", "listOrders", "processOrder"])
+  lambda_handlers = toset(["createOrder", "getOrder", "listOrders", "deleteOrder", "processOrder"])
 
   lambda_env = {
     ORDERS_TABLE_NAME      = aws_dynamodb_table.orders.name

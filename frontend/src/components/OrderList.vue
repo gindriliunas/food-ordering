@@ -4,6 +4,11 @@ import type { Order } from '../types/order';
 defineProps<{
   orders: Order[];
   loading: boolean;
+  deletingId: string | null;
+}>();
+
+const emit = defineEmits<{
+  delete: [id: string];
 }>();
 
 const statusLabel: Record<Order['status'], string> = {
@@ -33,9 +38,25 @@ const statusLabel: Record<Order['status'], string> = {
         <p v-if="order.deliveryAddress" class="address">{{ order.deliveryAddress }}</p>
         <small>{{ order.id }}</small>
       </div>
-      <span class="status" :class="order.status.toLowerCase()">
-        {{ statusLabel[order.status] }}
-      </span>
+      <div class="order-actions">
+        <span class="status" :class="order.status.toLowerCase()">
+          {{ statusLabel[order.status] }}
+        </span>
+        <button
+          type="button"
+          class="icon-btn delete-btn"
+          :disabled="deletingId === order.id"
+          :aria-label="`Delete order for ${order.items[0]?.name ?? 'order'}`"
+          @click="emit('delete', order.id)"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              fill="currentColor"
+              d="M7 4V2h10v2h5v2H2V4h5zM6 8h12l-1 12H7L6 8zm3 3v7h2v-7H9zm4 0v7h2v-7h-2z"
+            />
+          </svg>
+        </button>
+      </div>
     </article>
   </section>
 </template>

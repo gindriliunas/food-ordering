@@ -19,3 +19,13 @@ export function jsonResponse(
 export function errorResponse(statusCode: number, message: string): APIGatewayProxyResult {
   return jsonResponse(statusCode, { error: message });
 }
+
+export function noContentResponse(): APIGatewayProxyResult {
+  return {
+    statusCode: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+    },
+    body: '',
+  };
+}

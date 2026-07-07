@@ -5,6 +5,7 @@ const handlers = [
   'createOrder',
   'getOrder',
   'listOrders',
+  'deleteOrder',
   'processOrder',
 ];
 

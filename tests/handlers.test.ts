@@ -1,5 +1,6 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2 } from 'aws-lambda';
 import { handler as createOrderHandler } from '../src/handlers/createOrder';
+import { handler as deleteOrderHandler } from '../src/handlers/deleteOrder';
 import { handler as getOrderHandler } from '../src/handlers/getOrder';
 import { OrderService } from '../src/services/orderService';
 import { Order } from '../src/types/order';
@@ -30,6 +31,7 @@ describe('handlers', () => {
       getOrder: jest.fn(),
       listOrders: jest.fn(),
       confirmOrder: jest.fn(),
+      deleteOrder: jest.fn(),
     } as unknown as jest.Mocked<OrderService>;
 
     mockGetOrderService.mockReturnValue(service);
@@ -93,6 +95,40 @@ describe('handlers', () => {
 
       const result = (await getOrderHandler(event)) as APIGatewayProxyStructuredResultV2;
       expect(result.statusCode).toBe(404);
+    });
+  });
+
+  describe('deleteOrder', () => {
+    it('returns 204 on success', async () => {
+      service.deleteOrder.mockResolvedValue(undefined);
+
+      const event = {
+        pathParameters: { id: 'order-1' },
+      } as unknown as APIGatewayProxyEventV2;
+
+      const result = (await deleteOrderHandler(event)) as APIGatewayProxyStructuredResultV2;
+      expect(result.statusCode).toBe(204);
+      expect(service.deleteOrder).toHaveBeenCalledWith('order-1');
+    });
+
+    it('returns 404 when order missing', async () => {
+      service.deleteOrder.mockRejectedValue(new Error('Order not found: missing'));
+
+      const event = {
+        pathParameters: { id: 'missing' },
+      } as unknown as APIGatewayProxyEventV2;
+
+      const result = (await deleteOrderHandler(event)) as APIGatewayProxyStructuredResultV2;
+      expect(result.statusCode).toBe(404);
+    });
+
+    it('returns 400 when id missing', async () => {
+      const event = {
+        pathParameters: {},
+      } as unknown as APIGatewayProxyEventV2;
+
+      const result = (await deleteOrderHandler(event)) as APIGatewayProxyStructuredResultV2;
+      expect(result.statusCode).toBe(400);
     });
   });
 });

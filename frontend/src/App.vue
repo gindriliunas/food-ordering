@@ -16,6 +16,7 @@ const kitchenId = ref('');
 const orders = ref<Order[]>([]);
 const loading = ref(false);
 const saving = ref(false);
+const deletingId = ref<string | null>(null);
 const error = ref('');
 const success = ref('');
 
@@ -87,6 +88,26 @@ async function createOrder(payload: CreateOrderPayload) {
   }
 }
 
+async function deleteOrder(id: string) {
+  if (!token.value) {
+    return;
+  }
+
+  deletingId.value = id;
+  error.value = '';
+  success.value = '';
+
+  try {
+    await api.value.deleteOrder(id);
+    orders.value = orders.value.filter((order) => order.id !== id);
+    success.value = 'Order removed.';
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'Failed to delete order';
+  } finally {
+    deletingId.value = null;
+  }
+}
+
 onMounted(() => {
   void loadSession().then(() => {
     if (token.value) {
@@ -102,10 +123,6 @@ onMounted(() => {
       <div>
         <p class="eyebrow">Collectiv Food interview project</p>
         <h1>Serverless kitchen ordering</h1>
-        <p>
-          Vue.js frontend with AWS Cognito login, calling a TypeScript Lambda API
-          backed by DynamoDB, SNS, and SQS.
-        </p>
       </div>
       <div v-if="isAuthenticated" class="hero-actions">
         <p class="muted signed-in">
@@ -126,7 +143,12 @@ onMounted(() => {
 
       <div class="grid">
         <OrderForm @submit="createOrder" />
-        <OrderList :orders="orders" :loading="loading || saving" />
+        <OrderList
+          :orders="orders"
+          :loading="loading || saving"
+          :deleting-id="deletingId"
+          @delete="deleteOrder"
+        />
       </div>
     </template>
   </main>

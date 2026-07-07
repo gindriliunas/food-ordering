@@ -33,6 +33,7 @@ resource "aws_iam_role_policy" "lambda_app" {
           "dynamodb:GetItem",
           "dynamodb:PutItem",
           "dynamodb:UpdateItem",
+          "dynamodb:DeleteItem",
           "dynamodb:Scan"
         ]
         Resource = aws_dynamodb_table.orders.arn

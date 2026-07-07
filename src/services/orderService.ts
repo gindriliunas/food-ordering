@@ -57,6 +57,14 @@ export class OrderService {
     return this.repository.updateStatus(id, 'CONFIRMED');
   }
 
+  async deleteOrder(id: string): Promise<void> {
+    const existing = await this.repository.findById(id);
+    if (!existing) {
+      throw new Error(`Order not found: ${id}`);
+    }
+    await this.repository.delete(id);
+  }
+
   private async publishOrderPlaced(order: Order): Promise<void> {
     const event: OrderPlacedEvent = {
       eventType: 'OrderPlaced',

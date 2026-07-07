@@ -28,6 +28,7 @@ describe('OrderService', () => {
       findById: jest.fn(),
       findAll: jest.fn(),
       updateStatus: jest.fn(),
+      delete: jest.fn(),
     };
 
     snsClient = {
@@ -84,6 +85,24 @@ describe('OrderService', () => {
     it('throws when order not found', async () => {
       repository.findById.mockResolvedValue(null);
       await expect(service.confirmOrder('missing')).rejects.toThrow('Order not found');
+    });
+  });
+
+  describe('deleteOrder', () => {
+    it('deletes order when it exists', async () => {
+      repository.findById.mockResolvedValue(mockOrder);
+      repository.delete.mockResolvedValue(undefined);
+
+      await service.deleteOrder('test-order-id');
+
+      expect(repository.delete).toHaveBeenCalledWith('test-order-id');
+    });
+
+    it('throws when order not found', async () => {
+      repository.findById.mockResolvedValue(null);
+
+      await expect(service.deleteOrder('missing')).rejects.toThrow('Order not found');
+      expect(repository.delete).not.toHaveBeenCalled();
     });
   });
 });

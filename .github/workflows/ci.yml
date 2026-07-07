@@ -52,7 +52,7 @@ jobs:
 
       - name: Verify Lambda bundles exist
         run: |
-          for handler in createOrder getOrder listOrders processOrder; do
+          for handler in createOrder getOrder listOrders deleteOrder processOrder; do
             test -f "dist/${handler}.js" || (echo "Missing dist/${handler}.js" && exit 1)
           done
           test -f "frontend/dist/index.html" || (echo "Missing frontend/dist/index.html" && exit 1)

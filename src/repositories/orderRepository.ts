@@ -1,4 +1,5 @@
 import {
+  DeleteCommand,
   DynamoDBDocumentClient,
   GetCommand,
   PutCommand,
@@ -12,6 +13,7 @@ export interface OrderRepository {
   findById(id: string): Promise<Order | null>;
   findAll(): Promise<Order[]>;
   updateStatus(id: string, status: Order['status']): Promise<Order>;
+  delete(id: string): Promise<void>;
 }
 
 export class DynamoOrderRepository implements OrderRepository {
@@ -63,5 +65,14 @@ export class DynamoOrderRepository implements OrderRepository {
       })
     );
     return result.Attributes as Order;
+  }
+
+  async delete(id: string): Promise<void> {
+    await this.client.send(
+      new DeleteCommand({
+        TableName: this.tableName,
+        Key: { id },
+      })
+    );
   }
 }
