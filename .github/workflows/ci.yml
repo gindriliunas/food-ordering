@@ -72,11 +72,12 @@ jobs:
         run: terraform validate
         working-directory: terraform
 
-      - name: Install tfsec
-        run: curl -sSL https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/install_tfsec.sh | bash
-
       - name: tfsec scan
-        run: tfsec terraform --minimum-severity HIGH
+        uses: aquasecurity/tfsec-action@v1.0.3
+        with:
+          working_directory: terraform
+          soft_fail: false
+          additional_args: --minimum-severity HIGH
 
       - name: npm audit backend
         run: npm audit --audit-level=high
