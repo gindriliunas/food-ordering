@@ -130,7 +130,7 @@ Every push to `master` runs tests, then deploys to AWS automatically.
 
 1. **Terraform state** (already configured):
    - S3 bucket: `food-ordering-terraform-state-631026310596-us-east-1-an` (`us-east-1`)
-   - DynamoDB lock table: `food-ordering-terraform-locks` (`us-east-1`)
+   - S3 native state locking (`use_lockfile`)
    - App resources still deploy to `eu-west-2`
 
 2. **GitHub secrets** — add at [Repository Settings → Secrets](https://github.com/gindriliunas/food-ordering/settings/secrets/actions):

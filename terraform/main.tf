@@ -2,11 +2,11 @@ terraform {
   required_version = ">= 1.0"
 
   backend "s3" {
-    bucket         = "food-ordering-terraform-state-631026310596-us-east-1-an"
-    key            = "food-ordering/dev/terraform.tfstate"
-    region         = "us-east-1"
-    dynamodb_table = "food-ordering-terraform-locks"
-    encrypt        = true
+    bucket       = "food-ordering-terraform-state-631026310596-us-east-1-an"
+    key          = "food-ordering/dev/terraform.tfstate"
+    region       = "us-east-1"
+    use_lockfile = true
+    encrypt      = true
   }
 
   required_providers {
