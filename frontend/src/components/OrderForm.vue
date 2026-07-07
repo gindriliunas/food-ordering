@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
+import { calculateOrderTotals, formatGbp, unitPriceLabel } from '../lib/pricing';
 import type { CreateOrderPayload, OrderItem, OrderUnit } from '../types/order';
 
 const emit = defineEmits<{
   submit: [payload: CreateOrderPayload];
+  previewChange: [payload: CreateOrderPayload];
 }>();
 
 const ingredients = [
@@ -30,19 +32,32 @@ const item = reactive<OrderItem>({
 const deliveryDate = ref(new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 16));
 const deliveryAddress = ref('12 Kitchen Lane, London, E1 6AN');
 
+const previewPayload = computed<CreateOrderPayload>(() => ({
+  items: [
+    {
+      name: item.name,
+      quantity: Number(item.quantity),
+      unit: item.unit,
+    },
+  ],
+  deliveryDate: new Date(deliveryDate.value).toISOString(),
+  deliveryAddress: deliveryAddress.value.trim(),
+}));
+
+const totals = computed(() => calculateOrderTotals(item));
+const unitLabel = computed(() => unitPriceLabel(item.name, item.unit));
+
 function submitOrder() {
-  emit('submit', {
-    items: [
-      {
-        name: item.name,
-        quantity: Number(item.quantity),
-        unit: item.unit,
-      },
-    ],
-    deliveryDate: new Date(deliveryDate.value).toISOString(),
-    deliveryAddress: deliveryAddress.value.trim(),
-  });
+  emit('submit', previewPayload.value);
 }
+
+watch(
+  previewPayload,
+  (payload) => {
+    emit('previewChange', payload);
+  },
+  { immediate: true, deep: true }
+);
 </script>
 
 <template>
@@ -54,7 +69,7 @@ function submitOrder() {
 
     <label>
       Ingredient
-      <select v-model="item.name" required>
+      <select v-model="item.name" class="field-control" required>
         <option v-for="ingredient in ingredients" :key="ingredient" :value="ingredient">
           {{ ingredient }}
         </option>
@@ -64,12 +79,12 @@ function submitOrder() {
     <div class="row">
       <label>
         Quantity
-        <input v-model.number="item.quantity" required type="number" min="1" step="1" />
+        <input v-model.number="item.quantity" class="field-control" required type="number" min="1" step="1" />
       </label>
 
       <label>
         Unit
-        <select v-model="item.unit" required>
+        <select v-model="item.unit" class="field-control" required>
           <option v-for="unit in units" :key="unit" :value="unit">
             {{ unit }}
           </option>
@@ -81,6 +96,7 @@ function submitOrder() {
       Delivery address
       <input
         v-model="deliveryAddress"
+        class="field-control"
         required
         type="text"
         placeholder="Street, city, postcode"
@@ -90,8 +106,32 @@ function submitOrder() {
 
     <label>
       Delivery date
-      <input v-model="deliveryDate" required type="datetime-local" />
+      <input v-model="deliveryDate" class="field-control" required type="datetime-local" />
     </label>
+
+    <section class="pricing-summary" aria-label="Approximate order pricing">
+      <div class="pricing-row">
+        <span>Unit price</span>
+        <span>{{ unitLabel }}</span>
+      </div>
+      <div class="pricing-row">
+        <span>Line total</span>
+        <span>{{ formatGbp(totals.subtotal) }}</span>
+      </div>
+      <div class="pricing-row">
+        <span>Delivery</span>
+        <span>{{ formatGbp(totals.delivery) }}</span>
+      </div>
+      <div class="pricing-row">
+        <span>VAT (20%)</span>
+        <span>{{ formatGbp(totals.vat) }}</span>
+      </div>
+      <div class="pricing-row pricing-total">
+        <span>Estimated total</span>
+        <strong>{{ formatGbp(totals.total) }}</strong>
+      </div>
+      <p class="pricing-note muted">Approximate pricing for planning. Final invoice may vary.</p>
+    </section>
 
     <button type="submit">Place order</button>
   </form>

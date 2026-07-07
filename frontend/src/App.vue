@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue';
 import LoginForm from './components/LoginForm.vue';
 import OrderForm from './components/OrderForm.vue';
 import OrderList from './components/OrderList.vue';
+import SupplyTimeline from './components/SupplyTimeline.vue';
 import {
   getCurrentSessionToken,
   parseKitchenIdFromToken,
@@ -19,6 +20,12 @@ const saving = ref(false);
 const deletingId = ref<string | null>(null);
 const error = ref('');
 const success = ref('');
+
+const orderPreview = ref<CreateOrderPayload>({
+  items: [{ name: 'Tomatoes', quantity: 10, unit: 'kg' }],
+  deliveryDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+  deliveryAddress: '12 Kitchen Lane, London, E1 6AN',
+});
 
 const isAuthenticated = computed(() => Boolean(token.value));
 const api = computed(() => new OrdersApi(token.value ?? ''));
@@ -142,7 +149,7 @@ onMounted(() => {
       <p v-if="success" class="alert success">{{ success }}</p>
 
       <div class="grid">
-        <OrderForm @submit="createOrder" />
+        <OrderForm @submit="createOrder" @preview-change="orderPreview = $event" />
         <OrderList
           :orders="orders"
           :loading="loading || saving"
@@ -150,6 +157,12 @@ onMounted(() => {
           @delete="deleteOrder"
         />
       </div>
+
+      <SupplyTimeline
+        :ingredient="orderPreview.items[0]?.name ?? 'Tomatoes'"
+        :delivery-date="orderPreview.deliveryDate"
+        :delivery-address="orderPreview.deliveryAddress"
+      />
     </template>
   </main>
 </template>

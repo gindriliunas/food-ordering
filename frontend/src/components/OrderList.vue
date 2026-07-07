@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { calculateOrderTotals, formatGbp } from '../lib/pricing';
 import type { Order } from '../types/order';
 
 defineProps<{
@@ -35,6 +36,9 @@ const statusLabel: Record<Order['status'], string> = {
       <div>
         <strong>{{ order.items[0]?.name ?? 'Order' }}</strong>
         <p>{{ order.items[0]?.quantity }} {{ order.items[0]?.unit }} · {{ order.kitchenId }}</p>
+        <p v-if="order.items[0]" class="order-price">
+          Est. {{ formatGbp(calculateOrderTotals(order.items[0]).total) }}
+        </p>
         <p v-if="order.deliveryAddress" class="address">{{ order.deliveryAddress }}</p>
         <small>{{ order.id }}</small>
       </div>
