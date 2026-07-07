@@ -137,7 +137,19 @@ Every push to `master` runs tests, then deploys to AWS automatically.
    - `AWS_ACCESS_KEY_ID`
    - `AWS_SECRET_ACCESS_KEY`
 
-   Use an IAM user with permissions for Lambda, API Gateway, DynamoDB, SNS, SQS, Cognito, S3, CloudFront, and IAM.
+   Use an IAM user with permissions for Lambda, API Gateway (admin, not invoke-only), DynamoDB, SNS, SQS, Cognito, S3, CloudFront, and IAM. Example managed policies:
+
+   - `AWSLambda_FullAccess`
+   - `AmazonAPIGatewayAdministrator` (not `AmazonAPIGatewayInvokeFullAccess`)
+   - `AmazonDynamoDBFullAccess`
+   - `AmazonSNSFullAccess`
+   - `AmazonSQSFullAccess`
+   - `AmazonCognitoPowerUser`
+   - `AmazonS3FullAccess`
+   - `CloudFrontFullAccess`
+   - `IAMFullAccess` (Terraform creates Lambda execution roles)
+
+   IAM users are limited to **10 attached policies** — remove unused ones before adding new.
 
 3. **Push to master** — the `deploy` job in `.github/workflows/ci.yml` will:
    - Run `terraform apply` (using remote state in S3)
