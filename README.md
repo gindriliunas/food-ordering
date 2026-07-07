@@ -94,7 +94,38 @@ flowchart TB
     PipelineSec --> Lint[ESLint and Typecheck]
     PipelineSec --> IaCScan[tfsec]
     PipelineSec --> Audit[npm audit]
+    PipelineSec --> BranchRules[GitHub Branch Rulesets]
 ```
+
+### Repository branch protection (rulesets)
+
+Use a GitHub **ruleset** to keep the repo read-only for everyone except bypass actors. Configure at **Settings → Rules → Rulesets → New branch ruleset**.
+
+**Target branches:** `All branches` (or `master` only)
+
+**Recommended rules:**
+
+| Rule | Setting |
+|------|---------|
+| Restrict updates | On — blocks direct pushes |
+| Restrict deletions | On — blocks branch/tag deletion |
+| Block force pushes | On |
+| Restrict creations | Off — allows feature branches for PRs |
+| Require a pull request before merging | On |
+| Require status checks to pass | On — required check: `build-and-test` |
+
+**Bypass list (required — cannot be empty):**
+
+| Actor | Why |
+|-------|-----|
+| Repository owner / admin | Merge approved PRs |
+| GitHub Actions | Auto-deploy on push to `master` after merge |
+
+Without bypass entries, nobody (including CI) can update protected branches. The deploy job runs on push to `master`, so **GitHub Actions must be on the bypass list** if you use auto-deploy.
+
+**Optional stricter setup:** bypass only yourself, disable auto-deploy on push, and run deploy via `workflow_dispatch` manually.
+
+**Rules to skip unless configured:** signed commits, code scanning, code quality, deployment environments, code coverage.
 
 ### Dev vs production controls
 
@@ -121,8 +152,16 @@ Requires IAM permissions for `wafv2:*` on the deploy user. WAF ACLs are defined 
 Every PR and push runs:
 
 - `terraform fmt -check` and `terraform validate`
-- **tfsec** (fail on HIGH severity)
+- **tfsec** via `aquasecurity/tfsec-action` (fail on HIGH severity)
 - **npm audit** (backend + frontend, high severity)
+
+### Contribution workflow (with branch rulesets)
+
+1. Create a feature branch from `master`
+2. Open a pull request — CI runs `build-and-test` only (no deploy)
+3. Merge after checks pass — deploy runs automatically on `master`
+
+Direct pushes to `master` are blocked when **Restrict updates** is enabled.
 
 ## Features
 
@@ -147,7 +186,7 @@ Every PR and push runs:
 | Database | DynamoDB (on-demand) |
 | Messaging | SNS + SQS (+ DLQ) |
 | IaC | Terraform |
-| CI | GitHub Actions + tfsec + npm audit |
+| CI | GitHub Actions + tfsec + npm audit + branch rulesets |
 | Auth | AWS Cognito + API Gateway JWT authorizer |
 | Network | VPC + tiered security groups (Lambdas outside VPC in dev) |
 | WAF | Optional (`enable_waf`, off by default) |
@@ -300,7 +339,7 @@ terraform/        # AWS infrastructure (VPC, SGs, WAF optional)
 4. **TDD** — validation and service logic covered by unit tests before integration
 5. **Event-driven** — SNS decouples API from fulfilment; SQS gives retries + DLQ for failed messages
 6. **Security** — Cognito + JWT authorizer; VPC security group tiers; optional WAF; CORS restricted to CloudFront
-7. **DevSecOps** — tfsec and npm audit in CI; defence in depth at $0 for the demo
+7. **DevSecOps** — tfsec and npm audit in CI; branch rulesets for read-only repo; defence in depth at $0 for the demo
 8. **CI/CD** — GitHub Actions builds and verifies both backend and frontend
 9. **Cost** — serverless + on-demand DynamoDB stays within AWS free tier; VPC/SGs are free; WAF optional
 
