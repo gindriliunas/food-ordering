@@ -1,1 +1,1 @@
-jwt_secret = "change-me-in-production-use-a-long-random-string"
+# No secrets required — authentication is handled by AWS Cognito.

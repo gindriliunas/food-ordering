@@ -1,28 +1,55 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import LoginForm from './components/LoginForm.vue';
 import OrderForm from './components/OrderForm.vue';
 import OrderList from './components/OrderList.vue';
+import {
+  getCurrentSessionToken,
+  parseKitchenIdFromToken,
+  signOut,
+} from './services/cognitoAuth';
 import { OrdersApi } from './services/ordersApi';
 import type { CreateOrderPayload, Order } from './types/order';
 
-const token = ref(localStorage.getItem('food-ordering-token') ?? '');
+const token = ref<string | null>(null);
+const kitchenId = ref('');
 const orders = ref<Order[]>([]);
 const loading = ref(false);
 const saving = ref(false);
 const error = ref('');
 const success = ref('');
 
-const api = computed(() => new OrdersApi(token.value));
-const hasToken = computed(() => token.value.trim().length > 0);
+const isAuthenticated = computed(() => Boolean(token.value));
+const api = computed(() => new OrdersApi(token.value ?? ''));
 
-function saveToken() {
-  localStorage.setItem('food-ordering-token', token.value.trim());
-  success.value = 'Token saved. You can now call the API.';
-  void refreshOrders();
+async function loadSession() {
+  try {
+    const sessionToken = await getCurrentSessionToken();
+    token.value = sessionToken;
+    if (sessionToken) {
+      kitchenId.value = parseKitchenIdFromToken(sessionToken);
+    }
+  } catch {
+    token.value = null;
+  }
+}
+
+async function handleAuthenticated() {
+  await loadSession();
+  await refreshOrders();
+}
+
+function handleSignOut() {
+  signOut();
+  token.value = null;
+  kitchenId.value = '';
+  orders.value = [];
+  success.value = 'Signed out.';
+  error.value = '';
 }
 
 async function refreshOrders() {
-  if (!hasToken.value) {
+  if (!token.value) {
     return;
   }
 
@@ -39,8 +66,8 @@ async function refreshOrders() {
 }
 
 async function createOrder(payload: CreateOrderPayload) {
-  if (!hasToken.value) {
-    error.value = 'Paste a JWT first.';
+  if (!token.value) {
+    error.value = 'Please sign in first.';
     return;
   }
 
@@ -61,7 +88,11 @@ async function createOrder(payload: CreateOrderPayload) {
 }
 
 onMounted(() => {
-  void refreshOrders();
+  void loadSession().then(() => {
+    if (token.value) {
+      void refreshOrders();
+    }
+  });
 });
 </script>
 
@@ -72,33 +103,31 @@ onMounted(() => {
         <p class="eyebrow">Collectiv Food interview project</p>
         <h1>Serverless kitchen ordering</h1>
         <p>
-          Vue.js frontend calling a TypeScript AWS Lambda API with DynamoDB, SNS, SQS,
-          Terraform, and JWT authentication.
+          Vue.js frontend with AWS Cognito login, calling a TypeScript Lambda API
+          backed by DynamoDB, SNS, and SQS.
         </p>
       </div>
-      <button :disabled="loading || !hasToken" @click="refreshOrders">
-        {{ loading ? 'Refreshing...' : 'Refresh orders' }}
-      </button>
-    </section>
-
-    <section class="card token-card">
-      <div>
-        <p class="eyebrow">Authentication</p>
-        <h2>Paste demo JWT</h2>
-        <p class="muted">
-          Generate one with <code>node scripts/generate-token.js demo-kitchen</code>.
+      <div v-if="isAuthenticated" class="hero-actions">
+        <p class="muted signed-in">
+          Signed in{{ kitchenId ? ` as ${kitchenId}` : '' }}
         </p>
+        <button :disabled="loading" @click="refreshOrders">
+          {{ loading ? 'Refreshing...' : 'Refresh orders' }}
+        </button>
+        <button class="secondary" @click="handleSignOut">Sign out</button>
       </div>
-      <textarea v-model="token" rows="3" placeholder="Bearer token value"></textarea>
-      <button @click="saveToken">Save token</button>
     </section>
 
-    <p v-if="error" class="alert error">{{ error }}</p>
-    <p v-if="success" class="alert success">{{ success }}</p>
+    <LoginForm v-if="!isAuthenticated" @authenticated="handleAuthenticated" />
 
-    <div class="grid">
-      <OrderForm @submit="createOrder" />
-      <OrderList :orders="orders" :loading="loading || saving" />
-    </div>
+    <template v-else>
+      <p v-if="error" class="alert error">{{ error }}</p>
+      <p v-if="success" class="alert success">{{ success }}</p>
+
+      <div class="grid">
+        <OrderForm @submit="createOrder" />
+        <OrderList :orders="orders" :loading="loading || saving" />
+      </div>
+    </template>
   </main>
 </template>

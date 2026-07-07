@@ -16,8 +16,10 @@ variable "project_name" {
   default     = "food-ordering"
 }
 
-variable "jwt_secret" {
-  description = "Secret for JWT signing/validation"
+variable "demo_user_password" {
+  description = "Password for the pre-created demo Cognito user"
   type        = string
   sensitive   = true
+  default     = "DemoKitchen1!"
 }
+

@@ -9,14 +9,16 @@ resource "aws_apigatewayv2_api" "main" {
   }
 }
 
-resource "aws_apigatewayv2_authorizer" "jwt" {
-  api_id                            = aws_apigatewayv2_api.main.id
-  authorizer_type                   = "REQUEST"
-  authorizer_uri                    = aws_lambda_function.handlers["authorizer"].invoke_arn
-  identity_sources                  = ["$request.header.Authorization"]
-  name                              = "${var.project_name}-jwt-${var.environment}"
-  authorizer_payload_format_version = "2.0"
-  enable_simple_responses           = true
+resource "aws_apigatewayv2_authorizer" "cognito" {
+  api_id           = aws_apigatewayv2_api.main.id
+  authorizer_type  = "JWT"
+  identity_sources = ["$request.header.Authorization"]
+  name             = "${var.project_name}-cognito-${var.environment}"
+
+  jwt_configuration {
+    audience = [aws_cognito_user_pool_client.frontend.id]
+    issuer   = "https://cognito-idp.${var.aws_region}.amazonaws.com/${aws_cognito_user_pool.main.id}"
+  }
 }
 
 resource "aws_apigatewayv2_integration" "create_order" {
@@ -44,24 +46,24 @@ resource "aws_apigatewayv2_route" "create_order" {
   api_id             = aws_apigatewayv2_api.main.id
   route_key          = "POST /orders"
   target             = "integrations/${aws_apigatewayv2_integration.create_order.id}"
-  authorization_type = "CUSTOM"
-  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
 }
 
 resource "aws_apigatewayv2_route" "get_order" {
   api_id             = aws_apigatewayv2_api.main.id
   route_key          = "GET /orders/{id}"
   target             = "integrations/${aws_apigatewayv2_integration.get_order.id}"
-  authorization_type = "CUSTOM"
-  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
 }
 
 resource "aws_apigatewayv2_route" "list_orders" {
   api_id             = aws_apigatewayv2_api.main.id
   route_key          = "GET /orders"
   target             = "integrations/${aws_apigatewayv2_integration.list_orders.id}"
-  authorization_type = "CUSTOM"
-  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
 }
 
 resource "aws_apigatewayv2_stage" "default" {
@@ -92,12 +94,4 @@ resource "aws_lambda_permission" "api_list_orders" {
   function_name = aws_lambda_function.handlers["listOrders"].function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
-}
-
-resource "aws_lambda_permission" "api_authorizer" {
-  statement_id  = "AllowAPIGatewayInvokeAuthorizer"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.handlers["authorizer"].function_name
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/authorizers/${aws_apigatewayv2_authorizer.jwt.id}"
 }

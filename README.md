@@ -7,8 +7,8 @@ A kitchen ingredient ordering demo built for the Collectiv Food interview stack:
 ```mermaid
 flowchart LR
     User[Kitchen User] --> Vue[Vue.js Frontend]
-    Vue -->|"POST /orders JWT"| APIGW[API Gateway]
-    APIGW --> Auth[JWT Authorizer]
+    Vue -->|"POST /orders Cognito JWT"| APIGW[API Gateway]
+    APIGW --> Auth[Cognito JWT Authorizer]
     Auth --> ApiLambda[API Lambdas]
     ApiLambda -->|write| DDB[(DynamoDB)]
     ApiLambda -->|OrderPlaced| SNS[SNS Topic]
@@ -24,9 +24,9 @@ flowchart LR
 - **POST /orders** — place an ingredient order (JWT required)
 - **GET /orders/{id}** — fetch order by ID
 - **GET /orders** — list all orders
-- **Vue.js UI** — place orders, save a JWT, refresh live order status
+- **Vue.js UI** — sign in with AWS Cognito, place orders, refresh live order status
 - **Async processing** — SNS publishes `OrderPlaced`, SQS triggers worker Lambda to confirm orders
-- **JWT auth** — Lambda authorizer validates Bearer tokens
+- **AWS Cognito auth** — login/signup UI; API Gateway validates Cognito ID tokens
 - **SOLID design** — handlers → services → repositories
 - **Unit tests** — Jest with mocked AWS clients
 
@@ -43,7 +43,7 @@ flowchart LR
 | Messaging | SNS + SQS (+ DLQ) |
 | IaC | Terraform |
 | CI | GitHub Actions |
-| Auth | JWT (jsonwebtoken) |
+| Auth | AWS Cognito + API Gateway JWT authorizer |
 
 ## Quick start (local)
 
@@ -53,11 +53,22 @@ npm --prefix frontend install
 npm run ci          # backend lint + typecheck + test + build, then frontend build
 ```
 
-Run the frontend locally:
+Run the frontend locally (uses `frontend/.env.development`):
 
 ```bash
 npm --prefix frontend run dev
 ```
+
+### Sign in
+
+Use the built-in login screen. A demo account is created by Terraform:
+
+- **Email:** `demo@kitchen.com`
+- **Password:** `DemoKitchen1!`
+
+You can also click **Sign up** to create your own kitchen account (set a Kitchen ID during registration).
+
+Live app: run `terraform output frontend_url` after deploy.
 
 ## Deploy to AWS
 
@@ -74,9 +85,8 @@ npm --prefix frontend run dev
 npm run build
 npm --prefix frontend run build
 
-# 2. Configure secrets
+# 2. Configure Terraform (optional — defaults work for demo)
 cp terraform/terraform.tfvars.example terraform/terraform.tfvars
-# Edit jwt_secret to a long random string
 
 # 3. Deploy infrastructure
 cd terraform
@@ -84,7 +94,15 @@ terraform init
 terraform plan
 terraform apply
 
-# 4. Note the API and frontend outputs
+# 4. Build frontend with Cognito settings from Terraform
+@"
+VITE_API_URL=$(terraform -chdir=terraform output -raw api_url)
+VITE_COGNITO_USER_POOL_ID=$(terraform -chdir=terraform output -raw cognito_user_pool_id)
+VITE_COGNITO_CLIENT_ID=$(terraform -chdir=terraform output -raw cognito_client_id)
+"@ | Set-Content frontend/.env.production
+npm --prefix frontend run build
+
+# 5. Note outputs and upload frontend
 terraform output api_url
 terraform output frontend_bucket_name
 terraform output frontend_url
@@ -96,32 +114,11 @@ Upload the Vue build to S3:
 aws s3 sync frontend/dist "s3://$(terraform -chdir=terraform output -raw frontend_bucket_name)" --delete
 ```
 
-### Generate a test JWT
-
-```bash
-# Use the same secret as in terraform.tfvars
-$env:JWT_SECRET="your-secret-from-tfvars"
-node scripts/generate-token.js demo-kitchen
-```
-
 ### Smoke test
 
-```bash
-API_URL=$(terraform -chdir=terraform output -raw api_url)
-TOKEN=$(node scripts/generate-token.js demo-kitchen)
+Sign in at the frontend URL, create an order, and refresh until status becomes `CONFIRMED`.
 
-# Create order
-curl -X POST "$API_URL/orders" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"items":[{"name":"Tomatoes","quantity":10,"unit":"kg"}],"deliveryDate":"2026-07-15T09:00:00.000Z"}'
-
-# List orders
-curl -H "Authorization: Bearer $TOKEN" "$API_URL/orders"
-
-# Get order (replace ORDER_ID)
-curl -H "Authorization: Bearer $TOKEN" "$API_URL/orders/ORDER_ID"
-```
+Or test the API with a Cognito ID token from the login flow.
 
 After a few seconds, the worker Lambda processes the SQS message and updates the order status from `PENDING` to `CONFIRMED`.
 
@@ -148,7 +145,7 @@ terraform/        # AWS infrastructure
 3. **SOLID** — `OrderService` depends on `OrderRepository` interface, not DynamoDB directly
 4. **TDD** — validation and service logic covered by unit tests before integration
 5. **Event-driven** — SNS decouples API from fulfilment; SQS gives retries + DLQ for failed messages
-6. **Security** — JWT authorizer on all routes; secrets via Terraform variables (not hardcoded)
+6. **Security** — AWS Cognito handles users/passwords; API Gateway validates tokens
 7. **CI/CD** — GitHub Actions builds and verifies both backend and frontend
 8. **Cost** — serverless + on-demand DynamoDB stays within AWS free tier for demos
 

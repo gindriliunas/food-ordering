@@ -1,18 +1,23 @@
 import { APIGatewayProxyEventV2 } from 'aws-lambda';
 
-export interface AuthorizerContext {
-  kitchenId?: string;
-  sub?: string;
-}
-
 export type AuthorizedAPIGatewayEvent = APIGatewayProxyEventV2 & {
   requestContext: APIGatewayProxyEventV2['requestContext'] & {
     authorizer?: {
-      lambda?: AuthorizerContext;
+      jwt?: {
+        claims?: Record<string, string>;
+      };
     };
   };
 };
 
 export function getKitchenId(event: AuthorizedAPIGatewayEvent): string {
-  return event.requestContext?.authorizer?.lambda?.kitchenId ?? 'default-kitchen';
+  const claims = event.requestContext?.authorizer?.jwt?.claims;
+
+  return (
+    claims?.['custom:kitchen_id'] ??
+    claims?.preferred_username ??
+    claims?.email ??
+    claims?.sub ??
+    'default-kitchen'
+  );
 }

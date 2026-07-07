@@ -32,3 +32,23 @@ output "frontend_url" {
   description = "CloudFront URL for the Vue frontend"
   value       = "https://${aws_cloudfront_distribution.frontend.domain_name}"
 }
+
+output "cognito_user_pool_id" {
+  description = "Cognito User Pool ID"
+  value       = aws_cognito_user_pool.main.id
+}
+
+output "cognito_client_id" {
+  description = "Cognito app client ID for the Vue frontend"
+  value       = aws_cognito_user_pool_client.frontend.id
+}
+
+output "cognito_domain" {
+  description = "Cognito hosted UI domain prefix"
+  value       = aws_cognito_user_pool_domain.main.domain
+}
+
+output "demo_user_email" {
+  description = "Pre-created demo login email"
+  value       = aws_cognito_user.demo.username
+}

@@ -44,7 +44,14 @@ describe('handlers', () => {
           deliveryDate: '2026-07-15T09:00:00.000Z',
         }),
         requestContext: {
-          authorizer: { lambda: { kitchenId: 'kitchen-1' } },
+          authorizer: {
+            jwt: {
+              claims: {
+                'custom:kitchen_id': 'kitchen-1',
+                email: 'chef@kitchen.com',
+              },
+            },
+          },
         },
       } as unknown as APIGatewayProxyEventV2;
 

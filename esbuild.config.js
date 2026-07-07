@@ -6,7 +6,6 @@ const handlers = [
   'getOrder',
   'listOrders',
   'processOrder',
-  'authorizer',
 ];
 
 async function build() {

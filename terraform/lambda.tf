@@ -1,10 +1,9 @@
 locals {
-  lambda_handlers = toset(["createOrder", "getOrder", "listOrders", "processOrder", "authorizer"])
+  lambda_handlers = toset(["createOrder", "getOrder", "listOrders", "processOrder"])
 
   lambda_env = {
-    ORDERS_TABLE_NAME       = aws_dynamodb_table.orders.name
-    ORDER_EVENTS_TOPIC_ARN  = aws_sns_topic.order_events.arn
-    JWT_SECRET              = var.jwt_secret
+    ORDERS_TABLE_NAME      = aws_dynamodb_table.orders.name
+    ORDER_EVENTS_TOPIC_ARN = aws_sns_topic.order_events.arn
   }
 }
 

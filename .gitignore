@@ -8,6 +8,8 @@ coverage/
 *.zip
 .env
 .env.local
+frontend/.env.development
+frontend/.env.production
 terraform/terraform.tfvars
 *.log
 .DS_Store
