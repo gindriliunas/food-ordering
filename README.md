@@ -122,6 +122,30 @@ Or test the API with a Cognito ID token from the login flow.
 
 After a few seconds, the worker Lambda processes the SQS message and updates the order status from `PENDING` to `CONFIRMED`.
 
+## Automatic deployment (GitHub Actions)
+
+Every push to `master` runs tests, then deploys to AWS automatically.
+
+### One-time setup
+
+1. **Terraform state** (already configured):
+   - S3 bucket: `food-ordering-terraform-state-631026310596-us-east-1-an` (`us-east-1`)
+   - DynamoDB lock table: `food-ordering-terraform-locks` (`us-east-1`)
+   - App resources still deploy to `eu-west-2`
+
+2. **GitHub secrets** — add at [Repository Settings → Secrets](https://github.com/gindriliunas/food-ordering/settings/secrets/actions):
+   - `AWS_ACCESS_KEY_ID`
+   - `AWS_SECRET_ACCESS_KEY`
+
+   Use an IAM user with permissions for Lambda, API Gateway, DynamoDB, SNS, SQS, Cognito, S3, CloudFront, and IAM.
+
+3. **Push to master** — the `deploy` job in `.github/workflows/ci.yml` will:
+   - Run `terraform apply` (using remote state in S3)
+   - Build the Vue frontend with live Cognito/API URLs
+   - Upload to S3 and invalidate CloudFront
+
+Pull requests only run build/test — no deploy.
+
 ## Project structure
 
 ```

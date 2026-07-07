@@ -57,27 +57,61 @@ jobs:
           done
           test -f "frontend/dist/index.html" || (echo "Missing frontend/dist/index.html" && exit 1)
 
-  # Optional deploy — uncomment and add AWS secrets to enable
-  # deploy:
-  #   needs: build-and-test
-  #   runs-on: ubuntu-latest
-  #   if: github.ref == 'refs/heads/main'
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: actions/setup-node@v4
-  #       with:
-  #         node-version: '20'
-  #         cache: npm
-  #     - run: npm ci && npm run build
-  #     - run: npm ci && npm run build
-  #       working-directory: frontend
-  #     - uses: hashicorp/setup-terraform@v3
-  #     - run: terraform init
-  #       working-directory: terraform
-  #     - run: terraform apply -auto-approve
-  #       working-directory: terraform
-  #       env:
-  #         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  #         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  #         TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
-  #     - run: aws s3 sync frontend/dist "s3://$(terraform -chdir=terraform output -raw frontend_bucket_name)" --delete
+  deploy:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install backend dependencies
+        run: npm ci
+
+      - name: Build backend Lambdas
+        run: npm run build
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-2
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform init
+        run: terraform init
+        working-directory: terraform
+
+      - name: Terraform apply
+        run: terraform apply -auto-approve
+        working-directory: terraform
+
+      - name: Build frontend with deployed Cognito config
+        run: |
+          echo "VITE_API_URL=$(terraform -chdir=terraform output -raw api_url)" >> frontend/.env.production
+          echo "VITE_COGNITO_USER_POOL_ID=$(terraform -chdir=terraform output -raw cognito_user_pool_id)" >> frontend/.env.production
+          echo "VITE_COGNITO_CLIENT_ID=$(terraform -chdir=terraform output -raw cognito_client_id)" >> frontend/.env.production
+          npm --prefix frontend run build
+
+      - name: Deploy frontend to S3
+        run: |
+          aws s3 sync frontend/dist "s3://$(terraform -chdir=terraform output -raw frontend_bucket_name)" --delete
+
+      - name: Invalidate CloudFront cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id "$(terraform -chdir=terraform output -raw cloudfront_distribution_id)" \
+            --paths "/*"
