@@ -5,19 +5,124 @@ A kitchen ingredient ordering demo built for the Collectiv Food interview stack:
 ## Architecture
 
 ```mermaid
-flowchart LR
-    User[Kitchen User] --> Vue[Vue.js Frontend]
-    Vue -->|"POST /orders Cognito JWT"| APIGW[API Gateway]
-    APIGW --> Auth[Cognito JWT Authorizer]
-    Auth --> ApiLambda[API Lambdas]
-    ApiLambda -->|write| DDB[(DynamoDB)]
-    ApiLambda -->|OrderPlaced| SNS[SNS Topic]
-    SNS --> SQS[SQS Queue]
-    SQS --> Worker[Worker Lambda]
-    Worker -->|CONFIRMED| DDB
-    CloudFront[CloudFront] --> S3[S3 Frontend Bucket]
-    S3 --> Vue
+flowchart TB
+    subgraph edge [Edge]
+        User[Kitchen User]
+        CF[CloudFront]
+        Shield[AWS Shield Standard]
+        User --> CF
+        Shield -.-> CF
+    end
+
+    subgraph frontend [Frontend]
+        S3[S3 Frontend Bucket]
+        CF --> S3
+        S3 --> User
+    end
+
+    subgraph api [API]
+        APIGW[API Gateway HTTP]
+        Cognito[Cognito JWT Authorizer]
+        User -->|JWT| APIGW
+        APIGW --> Cognito
+    end
+
+    subgraph compute [Compute outside VPC]
+        ApiLambda[API Lambdas]
+        WorkerLambda[Worker Lambda]
+        APIGW --> ApiLambda
+    end
+
+    subgraph vpc [Single VPC]
+        SG_Mgmt[sg_management]
+        SG_Compute[sg_compute]
+        SG_Data[sg_data]
+        SG_Mgmt --> SG_Compute
+        SG_Compute --> SG_Data
+    end
+
+    subgraph data [Data and messaging unchanged]
+        DDB[(DynamoDB)]
+        SNS[SNS Topic]
+        SQS[SQS Queue]
+        ApiLambda -->|write| DDB
+        ApiLambda -->|OrderPlaced| SNS
+        SNS --> SQS
+        SQS --> WorkerLambda
+        WorkerLambda -->|CONFIRMED| DDB
+    end
 ```
+
+Lambdas stay **outside the VPC** so DynamoDB, SNS, and SQS keep working at zero extra cost. The VPC and security groups define the network trust model for production upgrades.
+
+## DevSecOps and security architecture
+
+### Control hierarchy
+
+```mermaid
+flowchart TB
+    DevSecOps[DevSecOps Program]
+
+    DevSecOps --> EdgeSec[Edge Security]
+    DevSecOps --> IdentitySec[Identity Security]
+    DevSecOps --> NetworkSec[Network Security]
+    DevSecOps --> AppSec[Application Security]
+    DevSecOps --> DataSec[Data Security]
+    DevSecOps --> PipelineSec[CI/CD Pipeline Security]
+
+    EdgeSec --> HTTPS[HTTPS Only]
+    EdgeSec --> Shield[AWS Shield Standard]
+    EdgeSec --> WAF_Opt[WAF Optional enable_waf]
+
+    IdentitySec --> Cognito[Cognito User Pool]
+    IdentitySec --> JWT[JWT Authorizer]
+    IdentitySec --> IAM[IAM Least Privilege]
+
+    NetworkSec --> VPC[Single VPC]
+    NetworkSec --> SG_Compute[sg_compute]
+    NetworkSec --> SG_Data[sg_data]
+    NetworkSec --> SG_Mgmt[sg_management]
+
+    AppSec --> Validation[Input Validation]
+    AppSec --> CORS[CORS Restriction]
+
+    DataSec --> S3OAC[S3 OAC No Public Access]
+    DataSec --> DDBEnc[DynamoDB Encryption at Rest]
+    DataSec --> SQSQueuePolicy[SQS Resource Policies]
+
+    PipelineSec --> Tests[Jest Unit Tests]
+    PipelineSec --> Lint[ESLint and Typecheck]
+    PipelineSec --> IaCScan[tfsec]
+    PipelineSec --> Audit[npm audit]
+```
+
+### Dev vs production controls
+
+| Control | Dev (this project) | Production upgrade |
+|---------|-------------------|-------------------|
+| VPC + security groups | Defined in Terraform (`terraform/vpc.tf`, `terraform/security_groups.tf`) | Attach Lambda ENIs to `sg_compute` |
+| WAF | `enable_waf = false` (default, $0) | Set `enable_waf = true` in tfvars (~$20+/mo) |
+| VPC endpoints | None | Free DynamoDB gateway + paid SNS/SQS interface endpoints |
+| NAT gateway | None | Only if public internet egress needed from VPC |
+| DynamoDB / SNS / SQS | Unchanged | Same stack — no migration |
+
+### Enable WAF (optional, paid)
+
+```hcl
+# terraform/terraform.tfvars
+enable_waf     = true
+waf_rate_limit = 2000
+```
+
+Requires IAM permissions for `wafv2:*` on the deploy user. WAF ACLs are defined in `terraform/waf.tf`.
+
+### Shift-left security in CI
+
+Every PR and push runs:
+
+- `terraform fmt -check` and `terraform validate`
+- **tfsec** (fail on HIGH severity)
+- **npm audit** (backend + frontend, high severity)
 
 ## Features
 
@@ -42,8 +147,10 @@ flowchart LR
 | Database | DynamoDB (on-demand) |
 | Messaging | SNS + SQS (+ DLQ) |
 | IaC | Terraform |
-| CI | GitHub Actions |
+| CI | GitHub Actions + tfsec + npm audit |
 | Auth | AWS Cognito + API Gateway JWT authorizer |
+| Network | VPC + tiered security groups (Lambdas outside VPC in dev) |
+| WAF | Optional (`enable_waf`, off by default) |
 
 ## Quick start (local)
 
@@ -148,8 +255,11 @@ Every push to `master` runs tests, then deploys to AWS automatically.
    - `AmazonS3FullAccess`
    - `CloudFrontFullAccess`
    - `IAMFullAccess` (Terraform creates Lambda execution roles)
+   - `AmazonEC2FullAccess` (or scoped EC2 VPC/security group permissions for DevSecOps VPC)
 
    IAM users are limited to **10 attached policies** — remove unused ones before adding new.
+
+   WAF permissions (`wafv2:*`) are only needed if `enable_waf = true`.
 
 3. **Push to master** — the `deploy` job in `.github/workflows/ci.yml` will:
    - Run `terraform apply` (using remote state in S3)
@@ -170,7 +280,7 @@ src/
 frontend/
   src/             # Vue components, API client, frontend types
 tests/            # Jest unit tests
-terraform/        # AWS infrastructure
+terraform/        # AWS infrastructure (VPC, SGs, WAF optional)
 .github/workflows/ci.yml
 ```
 
@@ -181,9 +291,10 @@ terraform/        # AWS infrastructure
 3. **SOLID** — `OrderService` depends on `OrderRepository` interface, not DynamoDB directly
 4. **TDD** — validation and service logic covered by unit tests before integration
 5. **Event-driven** — SNS decouples API from fulfilment; SQS gives retries + DLQ for failed messages
-6. **Security** — AWS Cognito handles users/passwords; API Gateway validates tokens
-7. **CI/CD** — GitHub Actions builds and verifies both backend and frontend
-8. **Cost** — serverless + on-demand DynamoDB stays within AWS free tier for demos
+6. **Security** — Cognito + JWT authorizer; VPC security group tiers; optional WAF; CORS restricted to CloudFront
+7. **DevSecOps** — tfsec and npm audit in CI; defence in depth at $0 for the demo
+8. **CI/CD** — GitHub Actions builds and verifies both backend and frontend
+9. **Cost** — serverless + on-demand DynamoDB stays within AWS free tier; VPC/SGs are free; WAF optional
 
 ## Cleanup
 

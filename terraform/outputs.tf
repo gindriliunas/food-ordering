@@ -57,3 +57,27 @@ output "demo_user_email" {
   description = "Pre-created demo login email"
   value       = aws_cognito_user.demo.username
 }
+
+output "vpc_id" {
+  description = "Application VPC ID"
+  value       = aws_vpc.main.id
+}
+
+output "private_subnet_id" {
+  description = "Private subnet ID for future compute placement"
+  value       = aws_subnet.private.id
+}
+
+output "security_group_ids" {
+  description = "Tiered security group IDs"
+  value = {
+    management = aws_security_group.management.id
+    compute    = aws_security_group.compute.id
+    data       = aws_security_group.data.id
+  }
+}
+
+output "waf_enabled" {
+  description = "Whether AWS WAF is enabled"
+  value       = var.enable_waf
+}

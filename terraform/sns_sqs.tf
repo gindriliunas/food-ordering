@@ -3,7 +3,7 @@ resource "aws_sns_topic" "order_events" {
 }
 
 resource "aws_sqs_queue" "order_processing_dlq" {
-  name = "${var.project_name}-order-processing-dlq-${var.environment}"
+  name                      = "${var.project_name}-order-processing-dlq-${var.environment}"
   message_retention_seconds = 1209600
 }
 

@@ -5,8 +5,12 @@ resource "aws_apigatewayv2_api" "main" {
   cors_configuration {
     allow_headers = ["authorization", "content-type"]
     allow_methods = ["GET", "POST", "DELETE", "OPTIONS"]
-    allow_origins = ["*"]
+    allow_origins = local.cors_origins
   }
+}
+
+locals {
+  cors_origins = var.allowed_cors_origins[0] == "*" ? ["https://${aws_cloudfront_distribution.frontend.domain_name}"] : var.allowed_cors_origins
 }
 
 resource "aws_apigatewayv2_authorizer" "cognito" {

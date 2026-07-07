@@ -1,1 +1,9 @@
 # No secrets required — authentication is handled by AWS Cognito.
+
+# DevSecOps (zero-cost defaults)
+# vpc_cidr       = "10.0.0.0/16"
+# enable_waf     = false
+# waf_rate_limit = 2000
+
+# CORS defaults to CloudFront URL when set to ["*"]
+# allowed_cors_origins = ["https://your-cloudfront-domain.cloudfront.net"]

@@ -57,6 +57,36 @@ jobs:
           done
           test -f "frontend/dist/index.html" || (echo "Missing frontend/dist/index.html" && exit 1)
 
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform fmt check
+        run: terraform fmt -check -recursive
+        working-directory: terraform
+
+      - name: Terraform init
+        run: terraform init -backend=false
+        working-directory: terraform
+
+      - name: Terraform validate
+        run: terraform validate
+        working-directory: terraform
+
+      - name: Install tfsec
+        run: curl -sSL https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/install_tfsec.sh | bash
+
+      - name: tfsec scan
+        run: tfsec terraform --minimum-severity HIGH
+
+      - name: npm audit backend
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
+      - name: npm audit frontend
+        run: npm audit --audit-level=high
+        working-directory: frontend
+        continue-on-error: true
+
   deploy:
     needs: build-and-test
     runs-on: ubuntu-latest
