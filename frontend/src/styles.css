@@ -361,6 +361,10 @@ h2 {
   font-weight: 800;
 }
 
+.orders-total {
+  margin-top: 0.5rem;
+}
+
 .timeline-card {
   margin-top: 1.25rem;
 }
