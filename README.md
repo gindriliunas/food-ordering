@@ -255,9 +255,17 @@ Every push to `master` runs tests, then deploys to AWS automatically.
    - `AmazonS3FullAccess`
    - `CloudFrontFullAccess`
    - `IAMFullAccess` (Terraform creates Lambda execution roles)
-   - `AmazonEC2FullAccess` (or scoped EC2 VPC/security group permissions for DevSecOps VPC)
 
-   IAM users are limited to **10 attached policies** — remove unused ones before adding new.
+   **VPC / security groups (DevSecOps):** attach inline policy `FoodOrderingEc2Vpc` from [terraform/github-actions-ec2-vpc-policy.json](terraform/github-actions-ec2-vpc-policy.json) instead of `AmazonEC2FullAccess` if you are at the 10-policy limit:
+
+   ```bash
+   aws iam put-user-policy \
+     --user-name github-actions-food-ordering \
+     --policy-name FoodOrderingEc2Vpc \
+     --policy-document file://terraform/github-actions-ec2-vpc-policy.json
+   ```
+
+   IAM users are limited to **10 attached managed policies** — use inline policies for extra permissions.
 
    WAF permissions (`wafv2:*`) are only needed if `enable_waf = true`.
 
