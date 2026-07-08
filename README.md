@@ -214,6 +214,8 @@ Use the built-in login screen. A demo account is created by Terraform:
 
 You can also click **Sign up** to create your own kitchen account (set a Kitchen ID during registration).
 
+> **Note:** Demo credentials are documented here for convenience. In production, shared passwords would not be committed to the repo — they would live in a secrets manager or be shared out-of-band with operators only.
+
 Live app: run `terraform output frontend_url` after deploy.
 
 ## Deploy to AWS
