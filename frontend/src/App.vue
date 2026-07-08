@@ -128,7 +128,7 @@ onMounted(() => {
   <main class="shell">
     <section class="hero">
       <div>
-        <p class="eyebrow">Collectiv Food interview project</p>
+        <p class="eyebrow">Food ordering project</p>
         <h1>Serverless kitchen ordering</h1>
       </div>
       <div v-if="isAuthenticated" class="hero-actions">
